@@ -1,0 +1,25 @@
+mcc: '262'
+mnc: '98'
+cell:
+nci: '0x000000010'
+idLength: 32
+tac: 1
+cellBarred: false
+
+
+linkIp: gnb1.ueransim.org
+ngapIp: gnb1.ueransim.org
+gtpIp: gnb1.ueransim.org
+
+amfConfigs:
+  - address: amf.open5gs.org
+    port: 38412
+
+slices:
+  - sst: 1
+    sd: 1
+
+ignoreStreamIds: true
+
+# Custom parameter to document the file share path
+fileSharePath: /shared

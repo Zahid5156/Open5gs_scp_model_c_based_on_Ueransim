@@ -1,0 +1,559 @@
+version: "3.7"
+services:
+  db:
+    container_name: db
+    image: "mongo:${MONGODB_VERSION}"
+    command: "mongod --bind_ip 0.0.0.0 --port 27017"
+    networks:
+      open5gs:
+        aliases:
+          - db.open5gs.org
+    volumes:
+      - db_data:/data/db
+      - db_config:/data/configdb
+    ports:
+      - "0.0.0.0:27017:27017/tcp"
+
+  nrf:
+    container_name: nrf
+    image: "nrf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/nrf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/nrf.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - nrf.open5gs.org
+    configs:
+      - source: nrf_config
+        target: /etc/open5gs/custom/nrf.yaml
+
+  scp:
+    container_name: scp
+    image: "scp:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/scp
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/scp.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - scp.open5gs.org
+    configs:
+      - source: scp_config
+        target: /etc/open5gs/custom/scp.yaml
+
+  ausf:
+    container_name: ausf
+    image: "ausf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/ausf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/ausf.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ausf.open5gs.org
+    configs:
+      - source: ausf_config
+        target: /etc/open5gs/custom/ausf.yaml
+    depends_on:
+      - nrf
+      - scp
+
+  udm:
+    container_name: udm
+    image: "udm:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/udm
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/udm.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - udm.open5gs.org
+    configs:
+      - source: udm_config
+        target: /etc/open5gs/custom/udm.yaml
+    depends_on:
+      - nrf
+      - scp
+
+  udr:
+    container_name: udr
+    image: "udr:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/udr
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/udr.yaml"
+    restart: unless-stopped
+    networks:
+      open5gs:
+        aliases:
+          - udr.open5gs.org
+    configs:
+      - source: udr_config
+        target: /etc/open5gs/custom/udr.yaml
+    depends_on:
+      - db
+      - nrf
+      - scp
+
+  nssf:
+    container_name: nssf
+    image: "nssf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/nssf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/nssf.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - nssf.open5gs.org
+    configs:
+      - source: nssf_config
+        target: /etc/open5gs/custom/nssf.yaml
+    depends_on:
+      - nrf
+      - scp
+
+  bsf:
+    container_name: bsf
+    image: "bsf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/bsf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/bsf.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - bsf.open5gs.org
+    configs:
+      - source: bsf_config
+        target: /etc/open5gs/custom/bsf.yaml
+    depends_on:
+      - nrf
+      - scp
+
+  pcf:
+    container_name: pcf
+    image: "pcf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/pcf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/pcf.yaml"
+    restart: unless-stopped
+    networks:
+      open5gs:
+        aliases:
+          - pcf.open5gs.org
+    configs:
+      - source: pcf_config
+        target: /etc/open5gs/custom/pcf.yaml
+    depends_on:
+      - db
+      - nrf
+      - scp
+
+  amf:
+    container_name: amf
+    image: "amf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/amf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/amf.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - amf.open5gs.org
+    configs:
+      - source: amf_config
+        target: /etc/open5gs/custom/amf.yaml
+    depends_on:
+      - nrf
+      - scp
+    ports:
+      - "0.0.0.0:38412:38412/sctp"
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.sctp.default_auto_asconf=1
+
+  smf:
+    container_name: smf
+    image: "smf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/smf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/smf.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - smf.open5gs.org
+    configs:
+      - source: smf_config
+        target: /etc/open5gs/custom/smf.yaml
+    depends_on:
+      - nrf
+      - scp
+      - upf
+
+  upf:
+    container_name: upf
+    image: "upf:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/upf
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - UBUNTU_VERSION=${UBUNTU_VERSION}
+    command: "-c /etc/open5gs/custom/upf.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - upf.open5gs.org
+    extra_hosts:
+      docker-host.external-ip: ${DOCKER_HOST_IP}
+    configs:
+      - source: upf_config
+        target: /etc/open5gs/custom/upf.yaml
+    ports:
+      - "0.0.0.0:2152:2152/udp"
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+
+  gnb1:
+    container_name: gnb1
+    image: "gnb:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/gnb1.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - gnb1.ueransim.org
+    configs:
+      - source: gnb1_config
+        target: /UERANSIM/config/gnb1.yaml
+    depends_on:
+      - amf
+  gnb2:
+      container_name: gnb2
+      image: "gnb:${UERANSIM_VERSION}"
+      command: "-c /UERANSIM/config/gnb2.yaml"
+      networks:
+        open5gs:
+          aliases:
+            - gnb2.ueransim.org
+      configs:
+        - source: gnb2_config
+          target: /UERANSIM/config/gnb2.yaml
+      depends_on:
+        - amf
+
+
+  ue1:
+    container_name: ue1
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue1.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue1.ueransim.org
+    configs:
+      - source: ue1_config
+        target: /UERANSIM/config/ue1.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb1
+
+  ue2:
+    container_name: ue2
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue2.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue2.ueransim.org
+    configs:
+      - source: ue2_config
+        target: /UERANSIM/config/ue2.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb1
+
+  ue3:
+    container_name: ue3
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue3.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue3.ueransim.org
+    configs:
+      - source: ue3_config
+        target: /UERANSIM/config/ue3.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb1
+
+  ue4:
+    container_name: ue4
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue4.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue4.ueransim.org
+    configs:
+      - source: ue4_config
+        target: /UERANSIM/config/ue4.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb1
+
+  ue5:
+    container_name: ue5
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue5.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue5.ueransim.org
+    configs:
+      - source: ue5_config
+        target: /UERANSIM/config/ue5.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb1
+
+  ue6:
+    container_name: ue6
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue6.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue6.ueransim.org
+    configs:
+      - source: ue6_config
+        target: /UERANSIM/config/ue6.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb2
+
+  ue7:
+    container_name: ue7
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue7.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue7.ueransim.org
+    configs:
+      - source: ue7_config
+        target: /UERANSIM/config/ue7.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb2
+
+  ue8:
+    container_name: ue8
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue8.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue8.ueransim.org
+    configs:
+      - source: ue8_config
+        target: /UERANSIM/config/ue8.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb2
+
+  ue9:
+    container_name: ue9
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue9.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue9.ueransim.org
+    configs:
+      - source: ue9_config
+        target: /UERANSIM/config/ue9.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb2
+
+  ue10:
+    container_name: ue10
+    image: "ue:${UERANSIM_VERSION}"
+    command: "-c /UERANSIM/config/ue10.yaml"
+    networks:
+      open5gs:
+        aliases:
+          - ue10.ueransim.org
+    configs:
+      - source: ue10_config
+        target: /UERANSIM/config/ue10.yaml
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - gnb2
+
+  webui:
+    container_name: webui
+    image: "webui:${OPEN5GS_VERSION}"
+    build:
+      context: ../../images/webui
+      args:
+        - OPEN5GS_VERSION=${OPEN5GS_VERSION}
+        - NODE_VERSION=${NODE_VERSION}
+    environment:
+      - DB_URI=mongodb://db.open5gs.org/open5gs
+      - PORT=9999
+      - HOSTNAME=0.0.0.0
+      - NODE_ENV=dev
+    command: "run dev"
+    networks:
+      open5gs:
+        aliases:
+          - webui.open5gs.org
+    depends_on:
+      - db
+    ports:
+      - "0.0.0.0:9999:9999/tcp"
+
+# File Sharing Service via Samba (Option 1)
+  samba:
+    container_name: samba
+    image: dperson/samba
+    restart: unless-stopped
+    ports:
+      - "137:137/udp"
+      - "138:138/udp"
+      - "139:139"
+      - "445:445"
+    volumes:
+      - ./shared:/mount
+    command:
+      - "-p"
+      - "-u"
+      - "user;password"
+      - "-s"
+      - "gnb1share;/mount/gnb1;yes;no;no"
+      - "-s"
+      - "gnb2share;/mount/gnb2;yes;no;no"
+    networks:
+      open5gs:
+        aliases:
+          - samba.share
+
+networks:
+  open5gs:
+    name: open5gs
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-ogs
+    ipam:
+      config:
+        - subnet: 10.33.33.0/24
+
+volumes:
+  db_data:
+    name: open5gs_db_data
+    labels:
+      org.open5gs.mongodb_version: ${MONGODB_VERSION}
+  db_config:
+    name: open5gs_db_config
+    labels:
+      org.open5gs.mongodb_version: ${MONGODB_VERSION}
+  file_share_data:
+
+configs:
+  nrf_config:
+    file: ../../../configs/scp/model-c/nrf.yaml
+  scp_config:
+    file: ../../../configs/scp/model-c/scp.yaml
+  ausf_config:
+    file: ../../../configs/scp/model-c/ausf.yaml
+  udm_config:
+    file: ../../../configs/scp/model-c/udm.yaml
+  udr_config:
+    file: ../../../configs/scp/model-c/udr.yaml
+  nssf_config:
+    file: ../../../configs/scp/model-c/nssf.yaml
+  bsf_config:
+    file: ../../../configs/scp/model-c/bsf.yaml
+  pcf_config:
+    file: ../../../configs/scp/model-c/pcf.yaml
+  amf_config:
+    file: ../../../configs/scp/model-c/amf.yaml
+  smf_config:
+    file: ../../../configs/scp/model-c/smf.yaml
+  upf_config:
+    file: ../../../configs/scp/model-c/upf.yaml
+  gnb1_config:
+    file: ../../../configs/scp/model-c/gnb1.yaml
+  gnb2_config:
+    file: ../../../configs/scp/model-c/gnb2.yaml  
+  ue1_config:
+    file: ../../../configs/scp/model-c/ue1.yaml
+  ue2_config:
+    file: ../../../configs/scp/model-c/ue2.yaml
+  ue3_config:
+    file: ../../../configs/scp/model-c/ue3.yaml
+  ue4_config:
+    file: ../../../configs/scp/model-c/ue4.yaml
+  ue5_config:
+    file: ../../../configs/scp/model-c/ue5.yaml
+  ue6_config:
+    file: ../../../configs/scp/model-c/ue6.yaml
+  ue7_config:
+    file: ../../../configs/scp/model-c/ue7.yaml
+  ue8_config:
+    file: ../../../configs/scp/model-c/ue8.yaml
+  ue9_config:
+    file: ../../../configs/scp/model-c/ue9.yaml
+  ue10_config:
+    file: ../../../configs/scp/model-c/ue10.yaml
